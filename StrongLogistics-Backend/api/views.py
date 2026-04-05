@@ -1,6 +1,7 @@
 import math
 import uuid
 
+from asgiref.sync import async_to_sync
 from django.contrib.auth import authenticate
 from django.db.models import Q
 from rest_framework import status
@@ -20,6 +21,12 @@ from .serializers import (
     RouteBlockageSerializer, DemandSettingSerializer, StockItemSerializer
 )
 from .permissions import IsAdmin, IsAdminOrDispatcher
+
+# Logistics constants
+DEPOT_LAT = 38.7
+DEPOT_LON = -9.14
+AVERAGE_SPEED_KMH = 60.0
+DISTANCE_SAVINGS_FACTOR = 0.3  # Estimated fraction of distance saved by interception rerouting
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -155,7 +162,6 @@ class OrderDetailView(APIView):
         return Response(OrderSerializer(order).data)
 
     def patch(self, request, pk):
-        import asyncio
         from .consumers import broadcast_notification
 
         order = self._get_order(pk)
@@ -173,12 +179,10 @@ class OrderDetailView(APIView):
                 notes=request.data.get('notes'),
             )
             try:
-                loop = asyncio.new_event_loop()
-                loop.run_until_complete(broadcast_notification(
+                async_to_sync(broadcast_notification)(
                     'order_status_update',
                     f"Order {order.order_id} status changed to {new_status}"
-                ))
-                loop.close()
+                )
             except Exception:
                 pass
 
@@ -223,8 +227,8 @@ class AutoAssignView(APIView):
             dist = 0.0
             for order in data['orders']:
                 dp = order.delivery_point
-                dist += haversine(38.7, -9.14, float(dp.latitude), float(dp.longitude))
-            time_est = (dist / 60.0) * 60
+                dist += haversine(DEPOT_LAT, DEPOT_LON, float(dp.latitude), float(dp.longitude))
+            time_est = (dist / AVERAGE_SPEED_KMH) * 60
             total_dist += dist
             total_time = max(total_time, time_est)
 
@@ -253,7 +257,6 @@ class AutoAssignConfirmView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrDispatcher]
 
     def post(self, request):
-        import asyncio
         from .consumers import broadcast_notification
 
         plan_id = request.data.get('plan_id')
@@ -290,12 +293,10 @@ class AutoAssignConfirmView(APIView):
         plan.save()
 
         try:
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(broadcast_notification(
+            async_to_sync(broadcast_notification)(
                 'auto_assign_confirmed',
                 f"Auto-assign plan {plan_id} confirmed"
-            ))
-            loop.close()
+            )
         except Exception:
             pass
 
@@ -330,7 +331,7 @@ class ScanInterceptionView(APIView):
                 'transit_order': OrderSerializer(order).data,
                 'redirected_quantity': redirected_qty,
                 'distance_to_critical_km': round(dist_to_critical, 2),
-                'distance_saved_km': round(dist_to_critical * 0.3, 2),
+                'distance_saved_km': round(dist_to_critical * DISTANCE_SAVINGS_FACTOR, 2),
             })
 
         plan_id = str(uuid.uuid4())
