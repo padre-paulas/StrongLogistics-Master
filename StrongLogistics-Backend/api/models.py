@@ -1,5 +1,4 @@
 import uuid
-import random
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
@@ -71,8 +70,8 @@ class StockItem(models.Model):
 
 
 def generate_order_id():
-    number = random.randint(1000, 9999)
-    return f"ORD-{number}"
+    """Generate a unique order ID using a short UUID segment."""
+    return f"ORD-{uuid.uuid4().hex[:6].upper()}"
 
 
 class Order(models.Model):

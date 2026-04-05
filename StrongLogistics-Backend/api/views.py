@@ -1,5 +1,6 @@
 import math
 import uuid
+import logging
 
 from asgiref.sync import async_to_sync
 from django.contrib.auth import authenticate
@@ -21,6 +22,8 @@ from .serializers import (
     RouteBlockageSerializer, DemandSettingSerializer, StockItemSerializer
 )
 from .permissions import IsAdmin, IsAdminOrDispatcher
+
+logger = logging.getLogger(__name__)
 
 # Logistics constants
 DEPOT_LAT = 38.7
@@ -184,7 +187,7 @@ class OrderDetailView(APIView):
                     f"Order {order.order_id} status changed to {new_status}"
                 )
             except Exception:
-                pass
+                logger.warning("Failed to broadcast order status update for %s", order.order_id, exc_info=True)
 
         return Response(OrderSerializer(self._get_order(pk)).data)
 
@@ -298,7 +301,7 @@ class AutoAssignConfirmView(APIView):
                 f"Auto-assign plan {plan_id} confirmed"
             )
         except Exception:
-            pass
+            logger.warning("Failed to broadcast auto-assign confirmation for plan %s", plan_id, exc_info=True)
 
         return Response({'detail': 'Plan confirmed'})
 
