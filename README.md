@@ -1,4 +1,45 @@
-# 🚚 StrongLogistics — Logistics Management Dashboard
+# 🚚 StrongLogistics — Logistics Management Dashboard (Monorepo)
+
+> **Monorepo structure:** `StrongLogistics/` (React frontend) + `StrongLogistics-Backend/` (Django REST API)
+
+## 🚀 Quick Start
+
+### Backend
+
+```bash
+cd StrongLogistics-Backend
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py seed_data        # loads sample data + default users
+daphne -b 0.0.0.0 -p 8000 config.asgi:application
+```
+
+### Frontend
+
+```bash
+cd StrongLogistics
+cp .env.example .env              # default: VITE_API_URL=http://localhost:8000
+npm install
+npm run dev                       # http://localhost:5173
+```
+
+### Default Users (created by seed_data)
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@stronglogistics.com | admin123 |
+| Dispatcher | dispatcher@stronglogistics.com | dispatcher123 |
+| Driver | driver1@stronglogistics.com | driver123 |
+
+### Docker Compose (one command)
+
+```bash
+docker-compose up --build
+# Frontend → http://localhost:5173
+# Backend  → http://localhost:8000/api/
+```
+
+---
 
 StrongLogistics is a web dashboard for coordinating dynamic resource distribution in logistics operations. It gives dispatchers and admins a single place to create and track delivery orders, monitor driver availability, visualize delivery points on an interactive map, and trigger an automated order-assignment algorithm — replacing manual coordination over phone or spreadsheets.
 

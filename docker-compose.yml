@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./StrongLogistics-Backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./StrongLogistics-Backend:/app
+    # SECRET_KEY and ALLOWED_HOSTS are pulled from env vars.
+    # For local dev you can copy StrongLogistics-Backend/.env.example to
+    # StrongLogistics-Backend/.env and daphne will pick it up via python-decouple.
+    environment:
+      - SECRET_KEY=${BACKEND_SECRET_KEY:-dev-secret-key-change-before-production}
+      - DEBUG=${BACKEND_DEBUG:-True}
+      - ALLOWED_HOSTS=${BACKEND_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - CORS_ALLOW_ALL_ORIGINS=True
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py seed_data &&
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+
+  frontend:
+    build:
+      context: ./StrongLogistics
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
